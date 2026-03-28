@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HipotecAR — Simulador de Crédito UVA</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <title>DecidíUVA — ¿Adelanto cuotas o invierto?</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     input[type=number]::-webkit-inner-spin-button,
@@ -161,13 +160,13 @@
       font-weight: 500; pointer-events: none;
     }
     .ipfx { left: .8rem; } .isfx { right: .8rem; }
-    input.field {
+    input.field, select.field {
       width: 100%; padding: .6rem .85rem; border: 1.5px solid var(--border);
       border-radius: 10px; font-size: .88rem; font-family: inherit;
       color: var(--text); background: #fff; outline: none;
       transition: border-color .18s, box-shadow .18s;
     }
-    input.field:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+    input.field:focus, select.field:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
     input.field.pfx { padding-left: 1.8rem; }
     input.field.sfx { padding-right: 2.2rem; }
     input.field.auto { border-color: var(--success); background: #f0fdf4; }
@@ -280,11 +279,7 @@
     .rate-bar-track { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
     .rate-bar-fill { height: 100%; border-radius: 5px; transition: width 1s ease; }
 
-    /* Chart */
-    .chart-card { background: var(--card); border-radius: 16px; padding: 1.4rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; }
-    .chart-card h3 { font-size: .9rem; font-weight: 600; margin-bottom: 1rem; }
-
-    /* Table */
+/* Table */
     .tbl-card { background: var(--card); border-radius: 16px; padding: 1.4rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; overflow-x: auto; }
     .tbl-card h3 { font-size: .9rem; font-weight: 600; margin-bottom: .9rem; cursor: pointer; display: flex; align-items: center; gap: .5rem; }
     .tbl-card h3 span.arrow { margin-left: auto; transition: transform .2s; }
@@ -316,12 +311,11 @@
     <div class="logo">
       <div class="logo-icon">🏠</div>
       <div>
-        <h1>HipotecAR</h1>
-        <p>¿Me conviene adelantar cuotas? · Simulador UVA Argentina</p>
+        <h1>DecidíUVA</h1>
+        <p>¿Adelanto cuotas de mi crédito hipotecario UVA o invierto el excedente? · Simulador gratuito</p>
       </div>
     </div>
     <div class="header-right">
-      <button class="btn-ejemplo" onclick="cargarEjemplo()">📋 Cargar ejemplo</button>
       <span class="badge-ar">🇦🇷 Datos BCRA en tiempo real</span>
     </div>
   </div>
@@ -342,11 +336,6 @@
       <div class="dot loading" id="dotInfl"></div>
       <span class="api-lbl">Inflación mensual (último INDEC):</span>
       <span class="api-val" id="lblInfl">cargando…</span>
-    </div>
-    <div class="api-item">
-      <div class="dot loading" id="dotPF"></div>
-      <span class="api-lbl">Tasa Badlar ref.:</span>
-      <span class="api-val" id="lblPF">cargando…</span>
     </div>
     <button class="btn-refresh" onclick="fetchBCRA()">↻ Actualizar</button>
   </div>
@@ -373,7 +362,7 @@
           <span class="tip">?<div class="tbox">El total en pesos que el banco te prestó al firmar el crédito, antes de cualquier ajuste. Está en la escritura o en el primer resumen de cuenta.</div></span>
         </label>
         <div class="iw"><span class="ipfx">$</span>
-          <input id="montoOrig" type="number" class="field pfx" placeholder="Ej: 50.000.000" min="0">
+          <input id="montoOrig" type="text" inputmode="numeric" class="field pfx" placeholder="Ej: 50.000.000" oninput="fmtMiles(this);autoRecalcFields()">
         </div>
       </div>
 
@@ -416,7 +405,7 @@
           <span class="tip">?<div class="tbox">El número total de cuotas del crédito. Por ejemplo: 240 = 20 años, 360 = 30 años. Está en el contrato hipotecario.</div></span>
         </label>
         <div class="iw">
-          <input id="plazoMeses" type="number" class="field sfx" placeholder="Ej: 240" min="12" max="480" oninput="onPlazoChange()">
+          <input id="plazoMeses" type="number" class="field sfx" placeholder="Ej: 240" min="12" max="480" step="1" oninput="onPlazoChange()">
           <span class="isfx">meses</span>
         </div>
         <p class="fnote" id="notePlazo"></p>
@@ -428,7 +417,7 @@
           <span class="tip">?<div class="tbox">¿Cuál es la cuota que vence este mes? Si ya pagaste 36 cuotas y la próxima es la 37, escribí 37. Te dice en qué momento estás del crédito.</div></span>
         </label>
         <div class="iw">
-          <input id="cuotaNum" type="number" class="field" placeholder="Ej: 37" min="1" oninput="onCuotaChange()">
+          <input id="cuotaNum" type="number" class="field" placeholder="Ej: 37" min="1" step="1" oninput="onCuotaChange()">
         </div>
         <p class="fnote" id="noteCuota"></p>
       </div>
@@ -476,21 +465,33 @@
           <span class="tip">?<div class="tbox">El total de pesos que tenés este mes para destinar a tu hipoteca (cuota normal + cualquier excedente que quieras usar para adelantar cuotas o invertir).</div></span>
         </label>
         <div class="iw"><span class="ipfx">$</span>
-          <input id="disponible" type="number" class="field pfx" placeholder="Ej: 1.200.000" min="0" oninput="onDisponibleChange()">
+          <input id="disponible" type="text" inputmode="numeric" class="field pfx" placeholder="Ej: 1.200.000" oninput="fmtMiles(this);onDisponibleChange()">
         </div>
         <p class="fnote" id="noteExcedente"></p>
       </div>
 
       <div class="fg">
         <label class="flabel">
-          Máx. cuotas a analizar para adelantar
-          <span class="tip">?<div class="tbox">La cantidad máxima de cuotas que querés evaluar adelantar. El simulador calculará cuántas podés pagar realmente con tu excedente y si conviene hacerlo.</div></span>
+          Comisión por cancelación anticipada
+          <span class="tip">?<div class="tbox">Algunos bancos cobran una comisión o penalidad cuando cancelás cuotas anticipadamente. Si tu banco no cobra nada, dejá en 0. Podés ingresarlo como porcentaje del capital adelantado o como monto fijo en pesos.</div></span>
         </label>
-        <div class="sl-wrap">
-          <input type="range" id="slCuotas" min="1" max="24" value="3" oninput="document.getElementById('slVal').textContent=this.value">
-          <span class="sl-val" id="slVal">3</span>
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+          <select id="comTipo" class="field" style="width:auto;padding:.5rem .8rem">
+            <option value="pct">% del capital</option>
+            <option value="fijo">Monto fijo $</option>
+          </select>
+          <div class="iw" style="flex:1;min-width:120px" id="comWrapPct">
+            <input id="comPct" type="number" class="field sfx" placeholder="Ej: 1" step="0.1" min="0" max="20">
+            <span class="isfx">%</span>
+          </div>
+          <div class="iw" style="flex:1;min-width:120px;display:none" id="comWrapFijo">
+            <span class="ipfx">$</span>
+            <input id="comFijo" type="text" inputmode="numeric" class="field pfx" placeholder="Ej: 50.000" oninput="fmtMiles(this)">
+          </div>
         </div>
+        <p class="fnote">Si no te cobran penalidad, dejá en 0</p>
       </div>
+
     </div>
 
     <div class="fg" style="max-width:380px">
@@ -523,37 +524,37 @@
       <div class="fg">
         <label class="flabel">
           Plazo Fijo 30 días (TNA)
-          <span class="tip">?<div class="tbox">La Tasa Nominal Anual que ofrece tu banco para un plazo fijo a 30 días. Consultalo en homebanking o comparadores. Se autocompleta con la tasa Badlar de referencia del BCRA.</div></span>
+          <span class="tip">?<div class="tbox">La Tasa Nominal Anual que ofrece tu banco para un plazo fijo a 30 días. Varía según el banco — consultala en homebanking o en la web de tu banco antes de calcular.</div></span>
         </label>
         <div class="iw">
-          <input id="tnaPF" type="number" class="field sfx auto" placeholder="cargando…" step="0.1" min="0" max="1000">
+          <input id="tnaPF" type="number" class="field sfx" placeholder="Ej: 30" step="0.1" min="0" max="1000">
           <span class="isfx">% TNA</span>
         </div>
-        <p class="fnote ok">🟢 Auto: Badlar BCRA (referencia)</p>
+        <p class="fnote">Consultá la tasa vigente en tu homebanking</p>
       </div>
 
       <div class="fg">
         <label class="flabel">
-          Plazo Fijo UVA (spread real)
-          <span class="tip">?<div class="tbox">Si tu banco ofrece Plazo Fijo UVA (mínimo 90 días), tu depósito ajusta por inflación más este spread adicional. Ingresá solo el spread por encima de la inflación. Si no tenés acceso, dejá en 0.</div></span>
+          Plazo Fijo UVA — tasa fija adicional
+          <span class="tip">?<div class="tbox">El Plazo Fijo UVA ajusta tu depósito por inflación (UVA/CER) más una tasa fija adicional. Acá ingresás SOLO esa tasa fija — sin contar el UVA. Por ejemplo, si el banco ofrece "UVA + 1%", escribís 1. Si tu banco no ofrece PF UVA, dejá en 0. Plazo mínimo: 90 días.</div></span>
         </label>
         <div class="iw">
-          <input id="spreadPFUVA" type="number" class="field sfx" value="1" step="0.1" min="0" max="20">
-          <span class="isfx">% real</span>
+          <input id="spreadPFUVA" type="number" class="field sfx" placeholder="Ej: 1" step="0.1" min="0" max="20">
+          <span class="isfx">% fijo</span>
         </div>
-        <p class="fnote">Spread sobre inflación del PF UVA (si disponible)</p>
+        <p class="fnote">Tasa fija de tu banco, sin contar el ajuste por inflación. Consultá en homebanking.</p>
       </div>
 
       <div class="fg">
         <label class="flabel">
-          FCI / Caución bursátil (TNA aprox.)
-          <span class="tip">?<div class="tbox">Rendimiento anual aproximado de Fondos Comunes de Inversión money market o cauciones bursátiles. Ofrecen alta liquidez (T+0 o T+1). Consultá en tu comitente o billetera (Naranja X, Personal Pay, Ualá, Cocos, etc.).</div></span>
+          Otro producto de inversión (TNA)
+          <span class="tip">?<div class="tbox">Si tenés otra alternativa de inversión (FCI, caución bursátil, cuenta remunerada, cripto, etc.), ingresá su rendimiento anual nominal acá. El simulador la va a comparar contra las otras opciones. Dejalo vacío si no tenés otra alternativa.</div></span>
         </label>
         <div class="iw">
-          <input id="tnaFCI" type="number" class="field sfx" placeholder="Ej: 38" step="0.1" min="0" max="1000">
+          <input id="tnaFCI" type="number" class="field sfx" placeholder="Ej: 40" step="0.1" min="0" max="10000">
           <span class="isfx">% TNA</span>
         </div>
-        <p class="fnote">Dejalo vacío si no usás esta opción</p>
+        <p class="fnote">Opcional — FCI, caución, cripto, cuenta remunerada, etc.</p>
       </div>
     </div>
 
@@ -565,16 +566,16 @@
 
   <!-- ── CALCULAR ── -->
   <button class="btn-calc" id="btnCalc" onclick="calcular()">
-    <span id="btnTxt">🧮 Calcular y Obtener Recomendación</span>
+    <span id="btnTxt">🧮 Calcular y ver resultado del análisis</span>
     <span id="btnSpin" class="spinner" style="display:none"></span>
   </button>
 
   <!-- ══════════════════ RESULTADOS ══════════════════ -->
   <div id="results">
 
-    <!-- Recomendación principal -->
+    <!-- Resultado del análisis principal -->
     <div class="rec-card" id="recCard">
-      <div class="rec-badge" id="recBadge">⭐ Recomendación</div>
+      <div class="rec-badge" id="recBadge">⭐ Resultado del análisis</div>
       <div class="rec-title" id="recTitle">—</div>
       <div class="rec-sub"   id="recSub">—</div>
       <div class="rec-metrics" id="recMetrics"></div>
@@ -642,11 +643,6 @@
       </p>
     </div>
 
-    <!-- Gráfico -->
-    <div class="chart-card">
-      <h3>📊 Evolución del Saldo de Capital (próximos años)</h3>
-      <canvas id="chartCanvas" height="90"></canvas>
-    </div>
 
     <!-- Tabla de amortización -->
     <div class="tbl-card">
@@ -697,23 +693,46 @@
 let uvaGlobal = null;
 let inflGlobal = null;
 let tnaPFGlobal = null;
-let chartInst = null;
 
 // ─── Formateo ────────────────────────────────────────────────────
 const fmt = n => isNaN(n) ? '0' : Math.round(Math.abs(n)).toLocaleString('es-AR');
 const fmtPct = n => (n * 100).toFixed(1) + '%';
 const dateStr = d => d.toISOString().split('T')[0];
 
-// ─── API de datos argentinos ──────────────────────────────────────
-// Fuente principal: argentinadatos.com (API pública, sin auth)
-const ADATA = 'https://api.argentinadatos.com/v1';
-
-async function apiGet(url) {
-  const r = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return await r.json();
+// Separador de miles mientras se tipea
+function fmtMiles(input) {
+  const pos  = input.selectionStart;
+  const prev = input.value.length;
+  const raw  = input.value.replace(/\D/g, '');
+  input.value = raw ? Number(raw).toLocaleString('es-AR') : '';
+  // Mantener posición del cursor
+  const diff = input.value.length - prev;
+  input.setSelectionRange(pos + diff, pos + diff);
 }
 
+// Parsear campo con separadores de miles → número
+function parseMiles(id) {
+  return parseInt(document.getElementById(id).value.replace(/\D/g, '') || '0') || 0;
+}
+
+// ─── API de datos argentinos ──────────────────────────────────────
+// Fuente principal: argentinadatos.com (API pública, sin auth)
+const ADATA = 'https://argentinadatos.com/api/v1';
+
+async function apiGet(url) {
+  // Intento directo primero
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch(e) {
+    // Fallback via allorigins (resuelve CORS)
+    const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const r2 = await fetch(proxy);
+    if (!r2.ok) throw new Error('HTTP ' + r2.status);
+    return await r2.json();
+  }
+}
 
 async function fetchBCRA() {
   // ── UVA ──
@@ -751,31 +770,6 @@ async function fetchBCRA() {
     document.getElementById('lblInfl').textContent = 'Error';
   }
 
-  // ── Tasa plazo fijo (usando tasa mayorista de argentinadatos) ──
-  try {
-    const data = await apiGet(`${ADATA}/finanzas/tasas/depositos30Dias`);
-    if (!data || !data.length) throw new Error('sin datos');
-    const ultimo = data[data.length - 1];
-    tnaPFGlobal  = ultimo.valor;
-    document.getElementById('tnaPF').value = ultimo.valor.toFixed(1);
-    document.getElementById('lblPF').textContent = ultimo.valor.toFixed(1) + '% TNA';
-    setDot('dotPF', 'ok');
-  } catch(e) {
-    // Fallback: intentar con otro endpoint de tasas
-    try {
-      const data2 = await apiGet(`${ADATA}/finanzas/tasas/badlar`);
-      if (!data2 || !data2.length) throw new Error('sin datos');
-      const ultimo = data2[data2.length - 1];
-      tnaPFGlobal  = ultimo.valor;
-      document.getElementById('tnaPF').value = ultimo.valor.toFixed(1);
-      document.getElementById('lblPF').textContent = ultimo.valor.toFixed(1) + '% TNA';
-      setDot('dotPF', 'ok');
-    } catch(e2) {
-      setDot('dotPF', 'error');
-      document.getElementById('lblPF').textContent = 'Error — ingresá manual';
-      document.getElementById('tnaPF').classList.remove('auto');
-    }
-  }
 }
 
 function setDot(id, state) {
@@ -798,7 +792,7 @@ function saldoRestanteUVA(montoUVA, tna, n, mesPagado) {
 // ─── Auto-cálculos ────────────────────────────────────────────────
 function getBaseParams() {
   return {
-    montoOrig: parseFloat(document.getElementById('montoOrig').value) || 0,
+    montoOrig: parseMiles('montoOrig'),
     uvaIni:    parseFloat(document.getElementById('uvaInicio').value) || 0,
     uvaHoy:    parseFloat(document.getElementById('uvaActual').value) || 0,
     tna:       parseFloat(document.getElementById('tnaCredito').value) || 0,
@@ -830,6 +824,12 @@ function autoCuota() {
 }
 
 // ─── Eventos en vivo ──────────────────────────────────────────────
+// Toggle comisión tipo
+document.getElementById('comTipo').addEventListener('change', function() {
+  document.getElementById('comWrapPct').style.display  = this.value === 'pct'  ? '' : 'none';
+  document.getElementById('comWrapFijo').style.display = this.value === 'fijo' ? '' : 'none';
+});
+
 async function completarInflacion() {
   const btn  = document.getElementById('btnEstimado');
   const note = document.getElementById('noteInflMensual');
@@ -916,21 +916,6 @@ function onDisponibleChange() {
 }
 
 // ─── Cargar ejemplo ───────────────────────────────────────────────
-function cargarEjemplo() {
-  document.getElementById('montoOrig').value    = 35000000;
-  document.getElementById('uvaInicio').value    = 380;
-  document.getElementById('tnaCredito').value   = 8.5;
-  document.getElementById('plazoMeses').value   = 240;
-  document.getElementById('cuotaNum').value     = 37;
-  document.getElementById('disponible').value   = 1100000;
-  document.getElementById('spreadPFUVA').value  = 1;
-  onPlazoChange(); onCuotaChange();
-  // Si ya tenemos UVA, auto-completar cuota y saldo
-  if (document.getElementById('uvaActual').value) {
-    autoSaldo(); autoCuota(); onDisponibleChange();
-  }
-}
-
 // ─── Tabla toggle ─────────────────────────────────────────────────
 function toggleTable(h) {
   const c = document.getElementById('tblContent');
@@ -948,12 +933,15 @@ function calcular() {
   const tna        = parseFloat(document.getElementById('tnaCredito').value);
   const plazo      = parseInt(document.getElementById('plazoMeses').value);
   const mesNum     = parseInt(document.getElementById('cuotaNum').value);
-  const disponible = parseFloat(document.getElementById('disponible').value);
+  const disponible = parseMiles('disponible');
   const inflM      = parseFloat(document.getElementById('inflMensual').value) / 100;
   const tnaPFInput = parseFloat(document.getElementById('tnaPF').value) / 100;
   const spreadUVA  = parseFloat(document.getElementById('spreadPFUVA').value) / 100;
   const tnaFCI     = parseFloat(document.getElementById('tnaFCI').value) / 100 || 0;
-  const maxCuotas  = parseInt(document.getElementById('slCuotas').value);
+  const comTipo    = document.getElementById('comTipo').value;
+  const comPct     = parseFloat(document.getElementById('comPct').value) / 100 || 0;
+  const comFijo    = parseMiles('comFijo');
+  const maxCuotas  = 999; // sin límite — calcula todas las posibles
 
   // Validación
   const miss = [];
@@ -973,7 +961,7 @@ function calcular() {
   document.getElementById('btnSpin').style.display = 'inline-block';
 
   setTimeout(() => {
-    try { doCalc({ montoOrig, uvaIni, uvaHoy, tna, plazo, mesNum, disponible, inflM, tnaPFInput, spreadUVA, tnaFCI, maxCuotas }); }
+    try { doCalc({ montoOrig, uvaIni, uvaHoy, tna, plazo, mesNum, disponible, inflM, tnaPFInput, spreadUVA, tnaFCI, maxCuotas, comTipo, comPct, comFijo }); }
     catch(e) { console.error(e); alert('Error: ' + e.message); }
     finally {
       document.getElementById('btnTxt').textContent = '🧮 Recalcular';
@@ -1002,7 +990,19 @@ function doCalc(p) {
   // (montoCuota ya se completa automáticamente vía autoRecalcFields)
 
   const excedente    = Math.max(0, p.disponible - cuotaPesos);
-  const excedenteUVA = excedente / p.uvaHoy;
+
+  // ── Comisión por cancelación anticipada ──
+  // Se calcula sobre el capital que efectivamente se adelanta, por eso la descontamos
+  // del excedente disponible antes de determinar cuántas cuotas pueden adelantarse.
+  // Para % usamos iteración: la comisión depende del capital, que depende del excedente neto.
+  // Aproximación directa: comFijo siempre se conoce; para % estimamos sobre excedente bruto.
+  const comFijoRaw = p.comTipo === 'fijo' ? p.comFijo : 0;
+  const excNeto    = Math.max(0, excedente - comFijoRaw);
+
+  // Para %, el capital adelantado = excNeto / (1 + comPct) (para que comisión + capital = excNeto)
+  const excedenteUVA = p.comTipo === 'pct'
+    ? (excNeto / (1 + p.comPct)) / p.uvaHoy
+    : excNeto / p.uvaHoy;
 
   // ── Generar tabla de amortización completa restante ──
   const sched = [];
@@ -1061,7 +1061,7 @@ function doCalc(p) {
   const ventaja = tnaCredReal - best.realAnual;
   const THRESH  = 0.005;
 
-  // ── Recomendación ──
+  // ── Resultado del análisis ──
   let rec;
   if (excedente <= 0) {
     rec = { type:'neutral', icon:'⚠️', title:'Sin excedente disponible', sub:'Con el dinero disponible apenas cubrís la cuota normal. No hay margen para adelantar cuotas ni invertir.' };
@@ -1075,10 +1075,10 @@ function doCalc(p) {
     rec = { type:'neutral', icon:'⚖️', title:'Ambas opciones son equivalentes', sub:`La diferencia entre adelantar (${fmtPct(tnaCredReal)} real) e invertir (${fmtPct(best.realAnual)} real) es menor al 0.5%. Si priorizás liquidez, invertí; si querés quitarte deuda de encima, adelantá.` };
   }
 
-  // ── Render Recomendación ──
+  // ── Render Resultado del análisis ──
   const rc = document.getElementById('recCard');
   rc.className = 'rec-card ' + rec.type;
-  document.getElementById('recBadge').textContent  = rec.icon + ' Recomendación';
+  document.getElementById('recBadge').textContent  = rec.icon + ' Resultado del análisis';
   document.getElementById('recTitle').textContent  = rec.title;
   document.getElementById('recSub').textContent    = rec.sub;
   document.getElementById('recMetrics').innerHTML  = excedente > 0 ? `
@@ -1092,27 +1092,33 @@ function doCalc(p) {
   const winner = rec.type === 'prepay' ? 'A' : rec.type === 'invest' ? 'B' : null;
   document.getElementById('scenA').className = 'scen' + (winner === 'A' ? ' winner' : '');
   document.getElementById('scenB').className = 'scen' + (winner === 'B' ? ' winner' : '');
-  document.getElementById('badgeA').innerHTML = winner==='A'?'<div class="win-badge">✓ RECOMENDADO</div>':'';
-  document.getElementById('badgeB').innerHTML = winner==='B'?'<div class="win-badge">✓ RECOMENDADO</div>':'';
+  document.getElementById('badgeA').innerHTML = winner==='A'?'<div class="win-badge">✓ OPCIÓN MÁS CONVENIENTE</div>':'';
+  document.getElementById('badgeB').innerHTML = winner==='B'?'<div class="win-badge">✓ OPCIÓN MÁS CONVENIENTE</div>':'';
+
+  // Comisión efectiva en pesos
+  const comPesos = p.comTipo === 'fijo'
+    ? p.comFijo
+    : capPagadoHoy * p.comPct;
 
   document.getElementById('metricsA').innerHTML = `
-    <div class="mrow"><span class="mrow-l">Cuotas a adelantar</span><span class="mrow-v">${cuotasViab}</span></div>
-    <div class="mrow"><span class="mrow-l">Capital pagado hoy</span><span class="mrow-v">$${fmt(capPagadoHoy)}</span></div>
-    <div class="mrow"><span class="mrow-l">Intereses ahorrados (hoy)</span><span class="mrow-v pos">$${fmt(intAhorHoy)}</span></div>
-    <div class="mrow"><span class="mrow-l">Cuotas que quedan</span><span class="mrow-v">${nuevasRestantes}</span></div>
-    <div class="mrow"><span class="mrow-l">Tasa retorno real</span><span class="mrow-v pos">${fmtPct(tnaCredReal)}/año</span></div>
-    <div class="mrow"><span class="mrow-l">Liquidez</span><span class="mrow-v">Nula (capital fijo en inmueble)</span></div>
+    <div class="mrow"><span class="mrow-l">Cuotas que eliminás</span><span class="mrow-v">${cuotasViab}</span></div>
+    <div class="mrow"><span class="mrow-l">Lo que pagás de más hoy</span><span class="mrow-v">$${fmt(capPagadoHoy)}</span></div>
+    ${comPesos > 0 ? `<div class="mrow"><span class="mrow-l">Comisión del banco</span><span class="mrow-v neg">−$${fmt(comPesos)}</span></div>` : ''}
+    <div class="mrow"><span class="mrow-l">Interés que te ahorrás</span><span class="mrow-v pos">$${fmt(intAhorHoy)}</span></div>
+    <div class="mrow"><span class="mrow-l">Cuotas restantes</span><span class="mrow-v">${nuevasRestantes}</span></div>
+    <div class="mrow"><span class="mrow-l">Rendimiento real anual</span><span class="mrow-v pos">${fmtPct(tnaCredReal)}/año</span></div>
+    <div class="mrow"><span class="mrow-l">¿Podés recuperar la plata?</span><span class="mrow-v">No — queda en el inmueble</span></div>
   `;
 
   const ganNom = excedente * best.nomAnual;
   const ganReal = excedente * best.realAnual;
   document.getElementById('metricsB').innerHTML = `
-    <div class="mrow"><span class="mrow-l">Mejor opción</span><span class="mrow-v">${best.name}</span></div>
-    <div class="mrow"><span class="mrow-l">Monto a invertir</span><span class="mrow-v">$${fmt(excedente)}</span></div>
-    <div class="mrow"><span class="mrow-l">Ganancia nominal (12m)</span><span class="mrow-v pos">$${fmt(ganNom)}</span></div>
-    <div class="mrow"><span class="mrow-l">Ganancia real (12m)</span><span class="mrow-v ${ganReal>=0?'pos':'neg'}">$${fmt(ganReal)}</span></div>
-    <div class="mrow"><span class="mrow-l">Tasa retorno real</span><span class="mrow-v ${best.realAnual>=0?'pos':'neg'}">${fmtPct(best.realAnual)}/año</span></div>
-    <div class="mrow"><span class="mrow-l">Liquidez</span><span class="mrow-v">${best.liq}</span></div>
+    <div class="mrow"><span class="mrow-l">Mejor producto</span><span class="mrow-v">${best.name}</span></div>
+    <div class="mrow"><span class="mrow-l">Lo que invertís</span><span class="mrow-v">$${fmt(excedente)}</span></div>
+    <div class="mrow"><span class="mrow-l">Ganancia en 12 meses</span><span class="mrow-v pos">$${fmt(ganNom)}</span></div>
+    <div class="mrow"><span class="mrow-l">Ganancia real (descontando inflación)</span><span class="mrow-v ${ganReal>=0?'pos':'neg'}">$${fmt(ganReal)}</span></div>
+    <div class="mrow"><span class="mrow-l">Rendimiento real anual</span><span class="mrow-v ${best.realAnual>=0?'pos':'neg'}">${fmtPct(best.realAnual)}/año</span></div>
+    <div class="mrow"><span class="mrow-l">¿Podés recuperar la plata?</span><span class="mrow-v">${best.liq === 'alta' ? 'Sí, en cualquier momento' : best.liq === 'baja' ? 'Al vencimiento (30 días)' : 'Al vencimiento (90 días)'}</span></div>
   `;
 
   // ── Barras de tasas ──
@@ -1132,47 +1138,6 @@ function doCalc(p) {
       document.getElementById('rateBarFCI').style.width = toW(fciReal);
     }
   }, 100);
-
-  // ── Gráfico ──
-  const labels = [], dataNorm = [], dataPre = [];
-  let bN = balUVA;
-  // Saldo post-adelanto (balance sin las últimas cuotasViab)
-  let bP = cuotasViab > 0
-    ? cUVA * (1 - Math.pow(1+r, -(mesesRest - cuotasViab))) / r
-    : balUVA;
-
-  const maxMeses = Math.min(mesesRest, 120);
-  for (let i = 0; i <= maxMeses; i++) {
-    labels.push('C' + (p.mesNum + i));
-    dataNorm.push(+(bN * p.uvaHoy).toFixed(0));
-    dataPre.push( +(Math.max(0, bP) * p.uvaHoy).toFixed(0));
-    if (bN > 0) { const iv=bN*r; bN=Math.max(0,bN-(cUVA-iv)); }
-    if (bP > 0) { const iv=bP*r; bP=Math.max(0,bP-(cUVA-iv)); }
-  }
-
-  if (chartInst) chartInst.destroy();
-  chartInst = new Chart(document.getElementById('chartCanvas').getContext('2d'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'Saldo sin adelantar ($)', data: dataNorm, borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,.05)', borderWidth:2, pointRadius:0, fill:true },
-        { label: `Saldo adelantando ${cuotasViab} cuota/s ($)`, data: dataPre, borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,.07)', borderWidth:2, pointRadius:0, fill:true }
-      ]
-    },
-    options: {
-      responsive:true,
-      interaction:{ mode:'index', intersect:false },
-      plugins:{
-        legend:{ position:'top' },
-        tooltip:{ callbacks:{ label: c => c.dataset.label+': $'+fmt(c.raw) } }
-      },
-      scales:{
-        y:{ ticks:{ callback: v=>'$'+fmt(v) }, grid:{ color:'rgba(0,0,0,.04)' } },
-        x:{ ticks:{ maxTicksLimit:10, maxRotation:45 }, grid:{ display:false } }
-      }
-    }
-  });
 
   // ── Tabla ──
   let html = '';
@@ -1214,21 +1179,6 @@ function doCalc(p) {
   const res = document.getElementById('results');
   res.style.display = 'block';
   res.scrollIntoView({ behavior:'smooth', block:'start' });
-}
-
-// ── Debug ─────────────────────────────────────────────────────────
-async function runDebug() {
-  const panel = document.getElementById('debugPanel');
-  panel.style.display = 'block';
-  panel.textContent = 'Probando argentinadatos.com...\n';
-  try {
-    const uva = await apiGet(`${ADATA}/finanzas/indices/uva`);
-    panel.textContent += `✅ UVA: ${uva.length} registros. Último: ${JSON.stringify(uva[uva.length-1])}\n`;
-  } catch(e) { panel.textContent += `❌ UVA: ${e.message}\n`; }
-  try {
-    const infl = await apiGet(`${ADATA}/finanzas/indices/inflacion`);
-    panel.textContent += `✅ IPC: ${infl.length} registros. Último: ${JSON.stringify(infl[infl.length-1])}\n`;
-  } catch(e) { panel.textContent += `❌ IPC: ${e.message}\n`; }
 }
 
 // ── Init ──────────────────────────────────────────────────────────
