@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HipotecAR — Simulador de Crédito UVA</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    input.readonly-field {
+      background: #f1f5fb; color: var(--muted); cursor: default;
+      border-color: var(--border) !important; box-shadow: none !important;
+      font-weight: 600; color: var(--text);
+    }
+
+    :root {
+      --navy:        #0f2040;
+      --navy-light:  #1a3560;
+      --blue:        #2563eb;
+      --accent:      #00c896;
+      --accent-dk:   #009e7a;
+      --success:     #16a34a;
+      --warning:     #d97706;
+      --danger:      #dc2626;
+      --bg:          #f1f5fb;
+      --card:        #ffffff;
+      --border:      #dde3ec;
+      --text:        #1e293b;
+      --muted:       #64748b;
+      --shadow:      0 2px 14px rgba(15,32,64,.09);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      color: #fff;
+      padding: 1rem 2rem;
+      position: sticky; top: 0; z-index: 200;
+      box-shadow: 0 2px 20px rgba(0,0,0,.25);
+    }
+    .header-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    }
+    .logo { display: flex; align-items: center; gap: .7rem; }
+    .logo-icon {
+      width: 38px; height: 38px; background: var(--accent);
+      border-radius: 10px; display: flex; align-items: center;
+      justify-content: center; font-size: 1.15rem; flex-shrink: 0;
+    }
+    .logo h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -.3px; }
+    .logo p  { font-size: .72rem; opacity: .75; }
+    .header-right { display: flex; align-items: center; gap: .75rem; }
+    .badge-ar {
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+      border-radius: 20px; padding: .3rem .9rem; font-size: .75rem; color: var(--accent);
+    }
+    .btn-ejemplo {
+      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+      color: #fff; border-radius: 8px; padding: .35rem .9rem; font-size: .78rem;
+      cursor: pointer; font-family: inherit; transition: background .15s;
+    }
+    .btn-ejemplo:hover { background: rgba(255,255,255,.25); }
+
+    /* ── MAIN ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+
+    /* ── API STATUS BAR ── */
+    .api-bar {
+      background: var(--card); border-radius: 12px; padding: .65rem 1.2rem;
+      box-shadow: var(--shadow); display: flex; align-items: center;
+      gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+    }
+    .api-item { display: flex; align-items: center; gap: .45rem; font-size: .8rem; }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0;
+    }
+    .dot.loading { background: var(--warning); animation: blink 1s infinite; }
+    .dot.ok      { background: var(--success); }
+    .dot.error   { background: var(--danger); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+    .api-lbl { color: var(--muted); }
+    .api-val { font-weight: 600; }
+    .btn-refresh {
+      margin-left: auto; background: var(--navy); color: #fff; border: none;
+      border-radius: 7px; padding: .3rem .8rem; font-size: .75rem; cursor: pointer;
+      font-family: inherit;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--card); border-radius: 16px; padding: 1.4rem 1.5rem;
+      box-shadow: var(--shadow); margin-bottom: 1.25rem;
+    }
+    .card-head {
+      display: flex; align-items: center; gap: .7rem;
+      border-bottom: 2px solid var(--border); margin-bottom: 1.2rem; padding-bottom: .7rem;
+    }
+    .card-ico {
+      width: 34px; height: 34px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .95rem; flex-shrink: 0;
+    }
+    .ico-b { background: #dbeafe; } .ico-g { background: #dcfce7; }
+    .ico-o { background: #ffedd5; } .ico-p { background: #f3e8ff; }
+    .card-title { font-weight: 600; font-size: .95rem; }
+    .card-sub   { font-size: .72rem; color: var(--muted); margin-top: 1px; }
+
+    /* ── GRID ── */
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    @media (max-width: 700px) { .g2,.g3 { grid-template-columns: 1fr; } }
+
+    /* ── FORM ── */
+    .fg { margin-bottom: .85rem; }
+    .flabel {
+      display: flex; align-items: center; gap: .35rem;
+      font-size: .8rem; font-weight: 500; margin-bottom: .35rem; color: var(--text);
+    }
+
+    /* Tooltip */
+    .tip {
+      position: relative; display: inline-flex;
+      width: 15px; height: 15px; border-radius: 50%;
+      background: var(--muted); color: #fff;
+      font-size: .6rem; font-weight: 700;
+      align-items: center; justify-content: center;
+      cursor: help; flex-shrink: 0; user-select: none;
+    }
+    .tip .tbox {
+      display: none; position: absolute;
+      bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%);
+      background: var(--navy); color: #fff;
+      padding: .55rem .8rem; border-radius: 8px;
+      font-size: .73rem; font-weight: 400; line-height: 1.45;
+      width: 230px; z-index: 500; box-shadow: 0 4px 18px rgba(0,0,0,.3);
+      pointer-events: none;
+    }
+    .tip .tbox::after {
+      content:''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+      border: 6px solid transparent; border-top-color: var(--navy);
+    }
+    .tip:hover .tbox { display: block; }
+
+    /* Inputs */
+    .iw { position: relative; display: flex; align-items: center; }
+    .ipfx,.isfx {
+      position: absolute; font-size: .82rem; color: var(--muted);
+      font-weight: 500; pointer-events: none;
+    }
+    .ipfx { left: .8rem; } .isfx { right: .8rem; }
+    input.field {
+      width: 100%; padding: .6rem .85rem; border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: .88rem; font-family: inherit;
+      color: var(--text); background: #fff; outline: none;
+      transition: border-color .18s, box-shadow .18s;
+    }
+    input.field:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+    input.field.pfx { padding-left: 1.8rem; }
+    input.field.sfx { padding-right: 2.2rem; }
+    input.field.auto { border-color: var(--success); background: #f0fdf4; }
+    .fnote { font-size: .7rem; color: var(--muted); margin-top: .25rem; }
+    .fnote.ok  { color: var(--success); }
+    .fnote.warn{ color: var(--warning); }
+
+    /* Slider */
+    .sl-wrap { display: flex; align-items: center; gap: .9rem; }
+    .sl-wrap input[type=range] {
+      flex: 1; height: 5px; -webkit-appearance: none; appearance: none;
+      background: var(--border); border-radius: 3px; outline: none;
+    }
+    .sl-wrap input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+      background: var(--navy-light); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.2);
+    }
+    .sl-val { min-width: 42px; text-align: center; font-weight: 700; color: var(--navy-light); font-size: 1rem; }
+
+    /* Botón estimado inflación */
+    .btn-estim {
+      background: var(--navy); color: #fff; border: none; border-radius: 8px;
+      padding: .35rem .85rem; font-size: .76rem; cursor: pointer;
+      font-family: inherit; display: flex; align-items: center; gap: .35rem;
+      transition: background .15s; white-space: nowrap;
+    }
+    .btn-estim:hover { background: var(--navy-light); }
+    .btn-estim:disabled { opacity: .6; cursor: default; }
+
+    /* Auto-calc link */
+    .auto-link {
+      background: none; border: none; color: var(--blue);
+      cursor: pointer; font-size: .7rem; padding: 0;
+      text-decoration: underline; font-family: inherit;
+    }
+
+    /* Info box */
+    .infobox {
+      background: #eff6ff; border: 1px solid #bfdbfe;
+      border-radius: 10px; padding: .8rem 1rem; font-size: .8rem;
+      color: #1e40af; display: flex; gap: .6rem; line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+
+    /* ── CALCULATE BUTTON ── */
+    .btn-calc {
+      width: 100%; padding: 1rem; margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      color: #fff; border: none; border-radius: 14px;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      font-family: inherit; letter-spacing: .2px;
+      display: flex; align-items: center; justify-content: center; gap: .6rem;
+      box-shadow: 0 4px 16px rgba(15,32,64,.28);
+      transition: transform .14s, box-shadow .14s;
+    }
+    .btn-calc:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(15,32,64,.36); }
+    .btn-calc:active { transform: translateY(0); }
+    .spinner {
+      width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff; border-radius: 50%; animation: spin .65s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESULTS ── */
+    #results { display: none; }
+
+    /* Recommendation card */
+    .rec-card {
+      border-radius: 16px; padding: 1.75rem 2rem; margin-bottom: 1.25rem;
+      position: relative; overflow: hidden;
+    }
+    .rec-card.prepay  { background: linear-gradient(135deg,#064e3b,#059669); color:#fff; }
+    .rec-card.invest  { background: linear-gradient(135deg,#1e3a8a,#2563eb); color:#fff; }
+    .rec-card.neutral { background: linear-gradient(135deg,#78350f,#d97706); color:#fff; }
+    .rec-badge {
+      display: inline-flex; align-items: center; gap: .35rem;
+      background: rgba(255,255,255,.18); border-radius: 20px;
+      padding: .25rem .8rem; font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px; margin-bottom: .65rem;
+    }
+    .rec-title { font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin-bottom: .45rem; }
+    .rec-sub   { font-size: .86rem; opacity: .88; max-width: 680px; line-height: 1.5; }
+    .rec-metrics { display: flex; gap: 2rem; margin-top: 1.4rem; flex-wrap: wrap; }
+    .rec-m-val { font-size: 1.7rem; font-weight: 700; display: block; }
+    .rec-m-lbl { font-size: .72rem; opacity: .8; }
+
+    /* Scenario comparison */
+    .cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+    @media (max-width: 600px) { .cmp-grid { grid-template-columns: 1fr; } }
+    .scen {
+      background: var(--card); border-radius: 16px; padding: 1.3rem;
+      box-shadow: var(--shadow); border: 2px solid var(--border);
+      transition: border-color .3s;
+    }
+    .scen.winner { border-color: var(--success); }
+    .scen-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .9rem; }
+    .scen-title { font-weight: 700; font-size: .93rem; }
+    .win-badge { background: var(--success); color:#fff; font-size:.68rem; padding:.18rem .55rem; border-radius:10px; font-weight:700; }
+    .mrow { display:flex; justify-content:space-between; align-items:center; padding:.42rem 0; border-bottom:1px solid var(--border); font-size:.82rem; }
+    .mrow:last-child { border-bottom: none; }
+    .mrow-l { color: var(--muted); }
+    .mrow-v { font-weight: 600; }
+    .pos { color: var(--success); } .neg { color: var(--danger); }
+
+    /* Rate visual bar */
+    .rate-compare { background: var(--card); border-radius: 16px; padding: 1.4rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; }
+    .rate-compare h3 { font-size: .9rem; font-weight: 600; margin-bottom: 1rem; }
+    .rate-bar-row { margin-bottom: .9rem; }
+    .rate-bar-label { display: flex; justify-content: space-between; font-size: .78rem; margin-bottom: .3rem; }
+    .rate-bar-track { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+    .rate-bar-fill { height: 100%; border-radius: 5px; transition: width 1s ease; }
+
+    /* Chart */
+    .chart-card { background: var(--card); border-radius: 16px; padding: 1.4rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; }
+    .chart-card h3 { font-size: .9rem; font-weight: 600; margin-bottom: 1rem; }
+
+    /* Table */
+    .tbl-card { background: var(--card); border-radius: 16px; padding: 1.4rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; overflow-x: auto; }
+    .tbl-card h3 { font-size: .9rem; font-weight: 600; margin-bottom: .9rem; cursor: pointer; display: flex; align-items: center; gap: .5rem; }
+    .tbl-card h3 span.arrow { margin-left: auto; transition: transform .2s; }
+    table { width: 100%; border-collapse: collapse; font-size: .79rem; min-width: 580px; }
+    thead th { background: var(--navy); color: #fff; padding: .5rem .7rem; text-align: right; font-weight: 500; font-size: .74rem; }
+    thead th:first-child { text-align: left; border-radius: 6px 0 0 0; }
+    thead th:last-child  { border-radius: 0 6px 0 0; }
+    tbody td { padding: .45rem .7rem; text-align: right; border-bottom: 1px solid var(--border); }
+    tbody td:first-child { text-align: left; color: var(--muted); font-weight: 500; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody tr.hl-prepay { background: #f0fdf4; }
+    tbody tr.hl-prepay td { color: var(--success); font-weight: 600; }
+
+    /* Advice */
+    .adv-card { background: var(--card); border-radius: 16px; padding: 1.4rem; box-shadow: var(--shadow); margin-bottom: 1.25rem; }
+    .adv-card h3 { font-size: .9rem; font-weight: 600; margin-bottom: .9rem; }
+    .adv-item { display: flex; gap: .7rem; background: var(--bg); border-radius: 10px; padding: .7rem .9rem; font-size: .82rem; line-height: 1.5; margin-bottom: .6rem; }
+    .adv-ico { flex-shrink: 0; margin-top: 1px; }
+
+    /* Footer */
+    footer { background: var(--card); border-top: 1px solid var(--border); padding: 1.2rem 2rem; text-align: center; font-size: .72rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🏠</div>
+      <div>
+        <h1>HipotecAR</h1>
+        <p>¿Me conviene adelantar cuotas? · Simulador UVA Argentina</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-ejemplo" onclick="cargarEjemplo()">📋 Cargar ejemplo</button>
+      <span class="badge-ar">🇦🇷 Datos BCRA en tiempo real</span>
+    </div>
+  </div>
+</header>
+
+<!-- DEBUG TEMPORAL -->
+<div id="debugPanel" style="background:#1e1e1e;color:#0f0;font-family:monospace;font-size:11px;padding:1rem;max-height:200px;overflow-y:auto;display:none"></div>
+<button onclick="runDebug()" style="position:fixed;bottom:1rem;right:1rem;z-index:9999;background:#e74c3c;color:#fff;border:none;padding:.5rem 1rem;border-radius:8px;cursor:pointer;font-size:.8rem">🔍 Debug BCRA</button>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main>
+
+  <!-- API Status Bar -->
+  <div class="api-bar">
+    <div class="api-item">
+      <div class="dot loading" id="dotUva"></div>
+      <span class="api-lbl">UVA hoy:</span>
+      <span class="api-val" id="lblUva">cargando…</span>
+    </div>
+    <div class="api-item">
+      <div class="dot loading" id="dotInfl"></div>
+      <span class="api-lbl">Inflación mensual (último INDEC):</span>
+      <span class="api-val" id="lblInfl">cargando…</span>
+    </div>
+    <div class="api-item">
+      <div class="dot loading" id="dotPF"></div>
+      <span class="api-lbl">Tasa Badlar ref.:</span>
+      <span class="api-val" id="lblPF">cargando…</span>
+    </div>
+    <button class="btn-refresh" onclick="fetchBCRA()">↻ Actualizar</button>
+  </div>
+
+  <div class="infobox">
+    ℹ️&nbsp;
+    <span>Completá los campos de tu crédito. Los datos marcados con <strong>🟢 Auto</strong> se traen del Banco Central automáticamente. Pasá el mouse sobre <strong style="background:var(--muted);color:#fff;padding:0 4px;border-radius:50%;font-size:.65rem">?</strong> para ver la explicación de cada variable.</span>
+  </div>
+
+  <!-- ── SECCIÓN 1: DATOS DEL CRÉDITO ── -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-ico ico-b">🏦</div>
+      <div>
+        <div class="card-title">Datos de tu Hipoteca UVA</div>
+        <div class="card-sub">Información del contrato tal como lo firmaste con el banco</div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="fg">
+        <label class="flabel">
+          Monto original del préstamo
+          <span class="tip">?<div class="tbox">El total en pesos que el banco te prestó al firmar el crédito, antes de cualquier ajuste. Está en la escritura o en el primer resumen de cuenta.</div></span>
+        </label>
+        <div class="iw"><span class="ipfx">$</span>
+          <input id="montoOrig" type="number" class="field pfx" placeholder="Ej: 50.000.000" min="0">
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="flabel">
+          Valor UVA al inicio del crédito
+          <span class="tip">?<div class="tbox">El valor de la UVA (Unidad de Valor Adquisitivo) el día que se acreditó el préstamo. Figura en el contrato hipotecario. La UVA ajusta diariamente por inflación (CER).</div></span>
+        </label>
+        <div class="iw"><span class="ipfx">$</span>
+          <input id="uvaInicio" type="number" class="field pfx" placeholder="Ej: 460.00" step="0.01" min="0">
+        </div>
+        <p class="fnote">Buscalo en la escritura o en el primer resumen del banco</p>
+      </div>
+
+      <div class="fg">
+        <label class="flabel">
+          Valor UVA actual
+          <span class="tip">?<div class="tbox">Valor vigente de la UVA publicado diariamente por el BCRA. Se obtiene automáticamente. Podés editarlo si querés usar otra fecha.</div></span>
+        </label>
+        <div class="iw"><span class="ipfx">$</span>
+          <input id="uvaActual" type="number" class="field pfx auto" placeholder="cargando…" step="0.01" min="0">
+        </div>
+        <p class="fnote ok" id="noteUvaActual">🟢 Auto: actualizando desde BCRA…</p>
+      </div>
+
+      <div class="fg">
+        <label class="flabel">
+          TNA del crédito — <span style="color:var(--warning);font-weight:700">sin UVA</span>
+          <span class="tip">?<div class="tbox">Poné la tasa pura del contrato, SIN incluir el ajuste UVA. En un crédito UVA, el capital ya ajusta por inflación por separado — la TNA es solo el interés adicional por encima de eso. La encontrás en el contrato como "Tasa Nominal Anual" o "spread". Suele estar entre 3% y 12%. NO pongas una tasa que ya incluya inflación (eso sería un crédito tradicional, no UVA).</div></span>
+        </label>
+        <div class="iw">
+          <input id="tnaCredito" type="number" class="field sfx" placeholder="Ej: 8.5" step="0.1" min="0" max="50">
+          <span class="isfx">% TNA</span>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="flabel">
+          Plazo original del crédito
+          <span class="tip">?<div class="tbox">El número total de cuotas del crédito. Por ejemplo: 240 = 20 años, 360 = 30 años. Está en el contrato hipotecario.</div></span>
+        </label>
+        <div class="iw">
+          <input id="plazoMeses" type="number" class="field sfx" placeholder="Ej: 240" min="12" max="480" oninput="onPlazoChange()">
+          <span class="isfx">meses</span>
+        </div>
+        <p class="fnote" id="notePlazo"></p>
+      </div>
+
+      <div class="fg">
+        <label class="flabel">
+          Número de cuota a pagar (próxima)
+          <span class="tip">?<div class="tbox">¿Cuál es la cuota que vence este mes? Si ya pagaste 36 cuotas y la próxima es la 37, escribí 37. Te dice en qué momento estás del crédito.</div></span>
+        </label>
+        <div class="iw">
+          <input id="cuotaNum" type="number" class="field" placeholder="Ej: 37" min="1" oninput="onCuotaChange()">
+        </div>
+        <p class="fnote" id="noteCuota"></p>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="fg">
+        <label class="flabel">
+          Saldo de capital restante ($ actuales)
+          <span class="tip">?<div class="tbox">Lo que aún debés de capital, ajustado a hoy por UVA. Se calcula automáticamente con los datos que ingresaste arriba.</div></span>
+        </label>
+        <div class="iw"><span class="ipfx">$</span>
+          <input id="saldoCapital" type="text" class="field pfx readonly-field" placeholder="Se completa automáticamente" readonly>
+        </div>
+        <p class="fnote ok">🟢 Calculado con UVA actual × saldo en UVA</p>
+      </div>
+
+      <div class="fg">
+        <label class="flabel">
+          Monto de tu próxima cuota ($ actuales)
+          <span class="tip">?<div class="tbox">Importe que te débita el banco este mes. Se calcula automáticamente como cuota en UVA × valor UVA actual.</div></span>
+        </label>
+        <div class="iw"><span class="ipfx">$</span>
+          <input id="montoCuota" type="text" class="field pfx readonly-field" placeholder="Se completa automáticamente" readonly>
+        </div>
+        <p class="fnote ok">🟢 Calculado con UVA actual × cuota en UVA</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECCIÓN 2: TU SITUACIÓN HOY ── -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-ico ico-g">💰</div>
+      <div>
+        <div class="card-title">Tu Situación Hoy</div>
+        <div class="card-sub">¿Con cuánta plata contás y qué querés analizar?</div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="fg">
+        <label class="flabel">
+          Dinero disponible este mes
+          <span class="tip">?<div class="tbox">El total de pesos que tenés este mes para destinar a tu hipoteca (cuota normal + cualquier excedente que quieras usar para adelantar cuotas o invertir).</div></span>
+        </label>
+        <div class="iw"><span class="ipfx">$</span>
+          <input id="disponible" type="number" class="field pfx" placeholder="Ej: 1.200.000" min="0" oninput="onDisponibleChange()">
+        </div>
+        <p class="fnote" id="noteExcedente"></p>
+      </div>
+
+      <div class="fg">
+        <label class="flabel">
+          Máx. cuotas a analizar para adelantar
+          <span class="tip">?<div class="tbox">La cantidad máxima de cuotas que querés evaluar adelantar. El simulador calculará cuántas podés pagar realmente con tu excedente y si conviene hacerlo.</div></span>
+        </label>
+        <div class="sl-wrap">
+          <input type="range" id="slCuotas" min="1" max="24" value="3" oninput="document.getElementById('slVal').textContent=this.value">
+          <span class="sl-val" id="slVal">3</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="fg" style="max-width:380px">
+      <label class="flabel">
+        Inflación mensual esperada (próximos 12 m.)
+        <span class="tip">?<div class="tbox">Tu estimación de la inflación mensual promedio para los próximos 12 meses. Afecta el rendimiento real del plazo fijo vs. el costo real de la deuda UVA. Podés ingresar tu propio número o usar el estimado basado en los últimos datos del INDEC.</div></span>
+      </label>
+      <div class="iw">
+        <input id="inflMensual" type="number" class="field sfx" placeholder="Ej: 2.5" step="0.1" min="0" max="50">
+        <span class="isfx">% / mes</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-top:.4rem;flex-wrap:wrap">
+        <button class="btn-estim" id="btnEstimado" onclick="completarInflacion()">📊 Completar con estimado BCRA</button>
+        <p class="fnote" id="noteInflMensual" style="margin:0"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECCIÓN 3: INVERSIONES ── -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-ico ico-o">📈</div>
+      <div>
+        <div class="card-title">Alternativas de Inversión</div>
+        <div class="card-sub">¿A qué tasa podría crecer tu excedente si no adelantás cuotas?</div>
+      </div>
+    </div>
+
+    <div class="g3">
+      <div class="fg">
+        <label class="flabel">
+          Plazo Fijo 30 días (TNA)
+          <span class="tip">?<div class="tbox">La Tasa Nominal Anual que ofrece tu banco para un plazo fijo a 30 días. Consultalo en homebanking o comparadores. Se autocompleta con la tasa Badlar de referencia del BCRA.</div></span>
+        </label>
+        <div class="iw">
+          <input id="tnaPF" type="number" class="field sfx auto" placeholder="cargando…" step="0.1" min="0" max="1000">
+          <span class="isfx">% TNA</span>
+        </div>
+        <p class="fnote ok">🟢 Auto: Badlar BCRA (referencia)</p>
+      </div>
+
+      <div class="fg">
+        <label class="flabel">
+          Plazo Fijo UVA (spread real)
+          <span class="tip">?<div class="tbox">Si tu banco ofrece Plazo Fijo UVA (mínimo 90 días), tu depósito ajusta por inflación más este spread adicional. Ingresá solo el spread por encima de la inflación. Si no tenés acceso, dejá en 0.</div></span>
+        </label>
+        <div class="iw">
+          <input id="spreadPFUVA" type="number" class="field sfx" value="1" step="0.1" min="0" max="20">
+          <span class="isfx">% real</span>
+        </div>
+        <p class="fnote">Spread sobre inflación del PF UVA (si disponible)</p>
+      </div>
+
+      <div class="fg">
+        <label class="flabel">
+          FCI / Caución bursátil (TNA aprox.)
+          <span class="tip">?<div class="tbox">Rendimiento anual aproximado de Fondos Comunes de Inversión money market o cauciones bursátiles. Ofrecen alta liquidez (T+0 o T+1). Consultá en tu comitente o billetera (Naranja X, Personal Pay, Ualá, Cocos, etc.).</div></span>
+        </label>
+        <div class="iw">
+          <input id="tnaFCI" type="number" class="field sfx" placeholder="Ej: 38" step="0.1" min="0" max="1000">
+          <span class="isfx">% TNA</span>
+        </div>
+        <p class="fnote">Dejalo vacío si no usás esta opción</p>
+      </div>
+    </div>
+
+    <div class="infobox" style="margin-bottom:0">
+      💡&nbsp;
+      <span>Tu crédito UVA tiene un costo <strong>real</strong> igual a la TNA (porque el capital ajusta por inflación). El plazo fijo tiene un rendimiento <strong>nominal</strong> que incluye inflación. La clave está en comparar las tasas reales de ambas opciones.</span>
+    </div>
+  </div>
+
+  <!-- ── CALCULAR ── -->
+  <button class="btn-calc" id="btnCalc" onclick="calcular()">
+    <span id="btnTxt">🧮 Calcular y Obtener Recomendación</span>
+    <span id="btnSpin" class="spinner" style="display:none"></span>
+  </button>
+
+  <!-- ══════════════════ RESULTADOS ══════════════════ -->
+  <div id="results">
+
+    <!-- Recomendación principal -->
+    <div class="rec-card" id="recCard">
+      <div class="rec-badge" id="recBadge">⭐ Recomendación</div>
+      <div class="rec-title" id="recTitle">—</div>
+      <div class="rec-sub"   id="recSub">—</div>
+      <div class="rec-metrics" id="recMetrics"></div>
+    </div>
+
+    <!-- Comparativa de escenarios -->
+    <div class="cmp-grid">
+      <div class="scen" id="scenA">
+        <div class="scen-head">
+          <div class="scen-title">🏠 Adelantar cuotas</div>
+          <div id="badgeA"></div>
+        </div>
+        <div id="metricsA"></div>
+      </div>
+      <div class="scen" id="scenB">
+        <div class="scen-head">
+          <div class="scen-title">📈 Invertir excedente</div>
+          <div id="badgeB"></div>
+        </div>
+        <div id="metricsB"></div>
+      </div>
+    </div>
+
+    <!-- Comparativa de tasas reales -->
+    <div class="rate-compare">
+      <h3>⚖️ Comparativa de Tasas Reales Anuales</h3>
+      <div class="rate-bar-row">
+        <div class="rate-bar-label">
+          <span>Costo real de tu deuda UVA (= TNA del crédito)</span>
+          <span id="rateLblCredito">—</span>
+        </div>
+        <div class="rate-bar-track">
+          <div class="rate-bar-fill" id="rateBarCredito" style="width:0%;background:#dc2626"></div>
+        </div>
+      </div>
+      <div class="rate-bar-row">
+        <div class="rate-bar-label">
+          <span>Rendimiento real Plazo Fijo 30d</span>
+          <span id="rateLblPF">—</span>
+        </div>
+        <div class="rate-bar-track">
+          <div class="rate-bar-fill" id="rateBarPF" style="width:0%;background:#2563eb"></div>
+        </div>
+      </div>
+      <div class="rate-bar-row" id="rowPFUVA">
+        <div class="rate-bar-label">
+          <span>Rendimiento real Plazo Fijo UVA</span>
+          <span id="rateLblPFUVA">—</span>
+        </div>
+        <div class="rate-bar-track">
+          <div class="rate-bar-fill" id="rateBarPFUVA" style="width:0%;background:#7c3aed"></div>
+        </div>
+      </div>
+      <div class="rate-bar-row" id="rowFCI" style="display:none">
+        <div class="rate-bar-label">
+          <span>Rendimiento real FCI / Caución</span>
+          <span id="rateLblFCI">—</span>
+        </div>
+        <div class="rate-bar-track">
+          <div class="rate-bar-fill" id="rateBarFCI" style="width:0%;background:#0891b2"></div>
+        </div>
+      </div>
+      <p style="font-size:.72rem;color:var(--muted);margin-top:.5rem">
+        La barra más larga no siempre gana — si la deuda tiene mayor costo real que la inversión, conviene cancelar deuda.
+      </p>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="chart-card">
+      <h3>📊 Evolución del Saldo de Capital (próximos años)</h3>
+      <canvas id="chartCanvas" height="90"></canvas>
+    </div>
+
+    <!-- Tabla de amortización -->
+    <div class="tbl-card">
+      <h3 onclick="toggleTable(this)">
+        📋 Tabla de Amortización (próximas cuotas)
+        <span class="arrow">▾</span>
+      </h3>
+      <div id="tblContent">
+        <p style="font-size:.75rem;color:var(--muted);margin-bottom:.6rem">
+          Las filas en verde corresponden a las cuotas que quedarían eliminadas si adelantás.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Cuota #</th>
+              <th>Pago (UVA)</th>
+              <th>Interés (UVA)</th>
+              <th>Capital (UVA)</th>
+              <th>Saldo (UVA)</th>
+              <th>Cuota ($)</th>
+              <th>Saldo ($)</th>
+            </tr>
+          </thead>
+          <tbody id="tblBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Consejos -->
+    <div class="adv-card">
+      <h3>💡 Consideraciones Clave</h3>
+      <div id="advList"></div>
+    </div>
+
+  </div><!-- /results -->
+</main>
+
+<footer>
+  HipotecAR — Simulador educativo. Los datos del BCRA/INDEC se obtienen en tiempo real pero pueden demorar en reflejar publicaciones recientes.
+  Esta herramienta no constituye asesoramiento financiero profesional.
+</footer>
+
+<!-- ══════════════════ JAVASCRIPT ══════════════════ -->
+<script>
+"use strict";
+
+// ─── Estado global ───────────────────────────────────────────────
+let uvaGlobal = null;
+let inflGlobal = null;
+let tnaPFGlobal = null;
+let chartInst = null;
+
+// ─── Formateo ────────────────────────────────────────────────────
+const fmt = n => isNaN(n) ? '0' : Math.round(Math.abs(n)).toLocaleString('es-AR');
+const fmtPct = n => (n * 100).toFixed(1) + '%';
+const dateStr = d => d.toISOString().split('T')[0];
+
+// ─── API de datos argentinos ──────────────────────────────────────
+// Fuente principal: argentinadatos.com (API pública, sin auth)
+const ADATA = 'https://argentinadatos.com/api/v1';
+
+async function apiGet(url) {
+  // Intento directo primero
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch(e) {
+    // Fallback via allorigins (resuelve CORS)
+    const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const r2 = await fetch(proxy);
+    if (!r2.ok) throw new Error('HTTP ' + r2.status);
+    return await r2.json();
+  }
+}
+
+async function fetchBCRA() {
+  // ── UVA ──
+  try {
+    // Devuelve array [{fecha, valor}], ordenado ascendente
+    const data = await apiGet(`${ADATA}/finanzas/indices/uva`);
+    if (!data || !data.length) throw new Error('sin datos');
+    const ultimo = data[data.length - 1];
+    uvaGlobal = ultimo.valor;
+    document.getElementById('uvaActual').value = ultimo.valor.toFixed(2);
+    document.getElementById('lblUva').textContent = '$ ' + ultimo.valor.toFixed(2);
+    setDot('dotUva', 'ok');
+    document.getElementById('noteUvaActual').textContent = `🟢 Auto: ${ultimo.fecha} (argentinadatos.com)`;
+  } catch(e) {
+    setDot('dotUva', 'error');
+    document.getElementById('lblUva').textContent = 'Error — ingresá manual';
+    document.getElementById('noteUvaActual').textContent = '⚠️ No disponible — ingresalo manualmente';
+    document.getElementById('noteUvaActual').className = 'fnote warn';
+    document.getElementById('uvaActual').classList.remove('auto');
+  }
+
+  // ── IPC mensual ──
+  try {
+    const data = await apiGet(`${ADATA}/finanzas/indices/inflacion`);
+    if (!data || !data.length) throw new Error('sin datos');
+    const ultimos = data.slice(-3);
+    const prom    = ultimos.reduce((s,x) => s + x.valor, 0) / ultimos.length;
+    inflGlobal    = prom;
+    const ultimo  = data[data.length - 1];
+    document.getElementById('lblInfl').textContent = ultimo.valor.toFixed(1) + '% mensual';
+    setDot('dotInfl', 'ok');
+    window._ipcData = { promedio: prom, ultimo };
+  } catch(e) {
+    setDot('dotInfl', 'error');
+    document.getElementById('lblInfl').textContent = 'Error';
+  }
+
+  // ── Tasa plazo fijo (usando tasa mayorista de argentinadatos) ──
+  try {
+    const data = await apiGet(`${ADATA}/finanzas/tasas/depositos30Dias`);
+    if (!data || !data.length) throw new Error('sin datos');
+    const ultimo = data[data.length - 1];
+    tnaPFGlobal  = ultimo.valor;
+    document.getElementById('tnaPF').value = ultimo.valor.toFixed(1);
+    document.getElementById('lblPF').textContent = ultimo.valor.toFixed(1) + '% TNA';
+    setDot('dotPF', 'ok');
+  } catch(e) {
+    // Fallback: intentar con otro endpoint de tasas
+    try {
+      const data2 = await apiGet(`${ADATA}/finanzas/tasas/badlar`);
+      if (!data2 || !data2.length) throw new Error('sin datos');
+      const ultimo = data2[data2.length - 1];
+      tnaPFGlobal  = ultimo.valor;
+      document.getElementById('tnaPF').value = ultimo.valor.toFixed(1);
+      document.getElementById('lblPF').textContent = ultimo.valor.toFixed(1) + '% TNA';
+      setDot('dotPF', 'ok');
+    } catch(e2) {
+      setDot('dotPF', 'error');
+      document.getElementById('lblPF').textContent = 'Error — ingresá manual';
+      document.getElementById('tnaPF').classList.remove('auto');
+    }
+  }
+}
+
+function setDot(id, state) {
+  document.getElementById(id).className = 'dot ' + state;
+}
+
+// ─── Cálculos auxiliares ──────────────────────────────────────────
+function cuotaFrancesUVA(montoUVA, tna, n) {
+  const r = tna / 100 / 12;
+  return montoUVA * r / (1 - Math.pow(1 + r, -n));
+}
+
+function saldoRestanteUVA(montoUVA, tna, n, mesPagado) {
+  // Saldo al inicio del mes (mesPagado+1), es decir luego de pagar mesPagado cuotas
+  const r = tna / 100 / 12;
+  const c = cuotaFrancesUVA(montoUVA, tna, n);
+  return c * (1 - Math.pow(1 + r, -(n - mesPagado))) / r;
+}
+
+// ─── Auto-cálculos ────────────────────────────────────────────────
+function getBaseParams() {
+  return {
+    montoOrig: parseFloat(document.getElementById('montoOrig').value) || 0,
+    uvaIni:    parseFloat(document.getElementById('uvaInicio').value) || 0,
+    uvaHoy:    parseFloat(document.getElementById('uvaActual').value) || 0,
+    tna:       parseFloat(document.getElementById('tnaCredito').value) || 0,
+    plazo:     parseInt(document.getElementById('plazoMeses').value) || 0,
+    mesNum:    parseInt(document.getElementById('cuotaNum').value) || 1,
+  };
+}
+
+function autoSaldo() {
+  const p = getBaseParams();
+  if (!p.montoOrig || !p.uvaIni || !p.uvaHoy || !p.tna || !p.plazo) {
+    alert('Completá primero: monto original, UVA inicio, UVA actual, TNA y plazo.');
+    return;
+  }
+  const montoUVA = p.montoOrig / p.uvaIni;
+  const saldoUVA = saldoRestanteUVA(montoUVA, p.tna, p.plazo, p.mesNum - 1);
+  document.getElementById('saldoCapital').value = Math.round(saldoUVA * p.uvaHoy);
+}
+
+function autoCuota() {
+  const p = getBaseParams();
+  if (!p.montoOrig || !p.uvaIni || !p.uvaHoy || !p.tna || !p.plazo) {
+    alert('Completá primero: monto original, UVA inicio, UVA actual, TNA y plazo.');
+    return;
+  }
+  const montoUVA = p.montoOrig / p.uvaIni;
+  const cUVA = cuotaFrancesUVA(montoUVA, p.tna, p.plazo);
+  document.getElementById('montoCuota').value = Math.round(cUVA * p.uvaHoy);
+}
+
+// ─── Eventos en vivo ──────────────────────────────────────────────
+async function completarInflacion() {
+  const btn  = document.getElementById('btnEstimado');
+  const note = document.getElementById('noteInflMensual');
+  btn.disabled = true;
+  btn.textContent = '⏳ Consultando BCRA…';
+
+  try {
+    // Si ya tenemos los datos en memoria, usarlos directamente
+    if (window._ipcData) {
+      const { promedio, ultimo } = window._ipcData;
+      document.getElementById('inflMensual').value = promedio.toFixed(1);
+      note.textContent = `🟢 Promedio últimos 3 meses IPC INDEC (hasta ${ultimo.fecha}) — podés editarlo`;
+      note.className = 'fnote ok';
+    } else {
+      // Re-fetch si no tenemos datos
+      const now = new Date(), d90 = new Date(now - 90 * 864e5);
+      const r = await fetch(`https://api.bcra.gob.ar/estadisticas/v2.0/principalesvariables`, { headers: { Accept: 'application/json' } });
+      const j = await r.json();
+      const ipcVar = (j.results||[]).find(v => v.descripcion.toLowerCase().includes('ipc') && v.descripcion.toLowerCase().includes('mensual'))?.idVariable || 27;
+      const data2 = await apiGet(`${ADATA}/finanzas/indices/inflacion`);
+      if (!data2 || !data2.length) throw new Error('sin datos');
+      const ultimos = data2.slice(-3);
+      const prom    = ultimos.reduce((s,x)=>s+x.valor,0) / ultimos.length;
+      const ultimo  = data2[data2.length - 1];
+      window._ipcData = { promedio: prom, ultimo };
+      document.getElementById('inflMensual').value = prom.toFixed(1);
+      note.textContent = `🟢 Promedio últimos 3 meses IPC INDEC (hasta ${ultimo.fecha}) — podés editarlo`;
+      note.className = 'fnote ok';
+    }
+  } catch(e) {
+    note.textContent = '⚠️ No se pudo obtener el dato. Ingresalo manualmente.';
+    note.className = 'fnote warn';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📊 Completar con estimado BCRA';
+  }
+}
+
+function autoRecalcFields() {
+  const p = getBaseParams();
+  if (!p.montoOrig || !p.uvaIni || !p.uvaHoy || !p.tna || !p.plazo || !p.mesNum) return;
+  const montoUVA = p.montoOrig / p.uvaIni;
+  const cUVA     = cuotaFrancesUVA(montoUVA, p.tna, p.plazo);
+  const saldoUVA = saldoRestanteUVA(montoUVA, p.tna, p.plazo, p.mesNum - 1);
+  document.getElementById('saldoCapital').value = '$' + Math.round(saldoUVA * p.uvaHoy).toLocaleString('es-AR');
+  document.getElementById('montoCuota').value   = '$' + Math.round(cUVA    * p.uvaHoy).toLocaleString('es-AR');
+  onDisponibleChange();
+}
+
+function onPlazoChange() {
+  const m = parseInt(document.getElementById('plazoMeses').value) || 0;
+  document.getElementById('notePlazo').textContent = m > 0 ? `= ${(m/12).toFixed(1)} años` : '';
+  autoRecalcFields();
+}
+
+function onCuotaChange() {
+  const c = parseInt(document.getElementById('cuotaNum').value) || 0;
+  const p = parseInt(document.getElementById('plazoMeses').value) || 0;
+  if (c > 0 && p > 0) {
+    const rest = p - c + 1;
+    const pct  = ((c-1)/p*100).toFixed(0);
+    document.getElementById('noteCuota').textContent =
+      `Pagaste ${c-1} de ${p} cuotas (${pct}%) · Quedan ${rest}`;
+  }
+  autoRecalcFields();
+}
+
+function onDisponibleChange() {
+  const disp  = parseFloat(document.getElementById('disponible').value) || 0;
+  const cuota = parseFloat(document.getElementById('montoCuota').value) || 0;
+  const el    = document.getElementById('noteExcedente');
+  if (!disp) { el.textContent = ''; return; }
+  const exc = disp - cuota;
+  if (cuota > 0 && exc < 0) {
+    el.textContent = `⚠️ No cubre la cuota ($${fmt(cuota)})`;
+    el.className = 'fnote warn';
+  } else if (exc > 0) {
+    el.textContent = `Excedente disponible: $${fmt(exc)}`;
+    el.className = 'fnote ok';
+  } else {
+    el.textContent = 'Justo para la cuota — sin excedente';
+    el.className = 'fnote';
+  }
+}
+
+// ─── Cargar ejemplo ───────────────────────────────────────────────
+function cargarEjemplo() {
+  document.getElementById('montoOrig').value    = 35000000;
+  document.getElementById('uvaInicio').value    = 380;
+  document.getElementById('tnaCredito').value   = 8.5;
+  document.getElementById('plazoMeses').value   = 240;
+  document.getElementById('cuotaNum').value     = 37;
+  document.getElementById('disponible').value   = 1100000;
+  document.getElementById('spreadPFUVA').value  = 1;
+  onPlazoChange(); onCuotaChange();
+  // Si ya tenemos UVA, auto-completar cuota y saldo
+  if (document.getElementById('uvaActual').value) {
+    autoSaldo(); autoCuota(); onDisponibleChange();
+  }
+}
+
+// ─── Tabla toggle ─────────────────────────────────────────────────
+function toggleTable(h) {
+  const c = document.getElementById('tblContent');
+  const visible = c.style.display !== 'none';
+  c.style.display = visible ? 'none' : '';
+  h.querySelector('.arrow').textContent = visible ? '▸' : '▾';
+}
+
+// ─── CÁLCULO PRINCIPAL ────────────────────────────────────────────
+function calcular() {
+  // Leer campos
+  const montoOrig  = parseFloat(document.getElementById('montoOrig').value);
+  const uvaIni     = parseFloat(document.getElementById('uvaInicio').value);
+  const uvaHoy     = parseFloat(document.getElementById('uvaActual').value);
+  const tna        = parseFloat(document.getElementById('tnaCredito').value);
+  const plazo      = parseInt(document.getElementById('plazoMeses').value);
+  const mesNum     = parseInt(document.getElementById('cuotaNum').value);
+  const disponible = parseFloat(document.getElementById('disponible').value);
+  const inflM      = parseFloat(document.getElementById('inflMensual').value) / 100;
+  const tnaPFInput = parseFloat(document.getElementById('tnaPF').value) / 100;
+  const spreadUVA  = parseFloat(document.getElementById('spreadPFUVA').value) / 100;
+  const tnaFCI     = parseFloat(document.getElementById('tnaFCI').value) / 100 || 0;
+  const maxCuotas  = parseInt(document.getElementById('slCuotas').value);
+
+  // Validación
+  const miss = [];
+  if (!montoOrig)  miss.push('Monto original');
+  if (!uvaIni)     miss.push('UVA al inicio');
+  if (!uvaHoy)     miss.push('UVA actual');
+  if (!tna)        miss.push('TNA del crédito');
+  if (!plazo)      miss.push('Plazo');
+  if (!mesNum)     miss.push('Número de cuota');
+  if (!disponible) miss.push('Dinero disponible');
+  if (isNaN(inflM))     miss.push('Inflación mensual');
+  if (isNaN(tnaPFInput)) miss.push('TNA Plazo Fijo');
+  if (miss.length) { alert('Falta completar:\n• ' + miss.join('\n• ')); return; }
+  if (mesNum >= plazo)  { alert('El número de cuota actual no puede ser ≥ al plazo total.'); return; }
+
+  document.getElementById('btnTxt').textContent = 'Calculando…';
+  document.getElementById('btnSpin').style.display = 'inline-block';
+
+  setTimeout(() => {
+    try { doCalc({ montoOrig, uvaIni, uvaHoy, tna, plazo, mesNum, disponible, inflM, tnaPFInput, spreadUVA, tnaFCI, maxCuotas }); }
+    catch(e) { console.error(e); alert('Error: ' + e.message); }
+    finally {
+      document.getElementById('btnTxt').textContent = '🧮 Recalcular';
+      document.getElementById('btnSpin').style.display = 'none';
+    }
+  }, 80);
+}
+
+function doCalc(p) {
+  const r = p.tna / 100 / 12;
+  const montoUVA = p.montoOrig / p.uvaIni;
+
+  // Cuota fija en UVA
+  const cUVA = cuotaFrancesUVA(montoUVA, p.tna, p.plazo);
+
+  // Saldo restante en UVA al inicio del mes actual
+  const saldoRaw = document.getElementById('saldoCapital').value.replace(/[^0-9]/g, '');
+  const saldoNum = parseInt(saldoRaw) || 0;
+  let balUVA = saldoNum > 0
+    ? saldoNum / p.uvaHoy
+    : saldoRestanteUVA(montoUVA, p.tna, p.plazo, p.mesNum - 1);
+
+  const mesesRest = p.plazo - p.mesNum + 1;
+  const cuotaPesos = cUVA * p.uvaHoy;
+
+  // (montoCuota ya se completa automáticamente vía autoRecalcFields)
+
+  const excedente    = Math.max(0, p.disponible - cuotaPesos);
+  const excedenteUVA = excedente / p.uvaHoy;
+
+  // ── Generar tabla de amortización completa restante ──
+  const sched = [];
+  let bal = balUVA;
+  for (let i = 0; i < mesesRest; i++) {
+    const int = bal * r;
+    const cap = cUVA - int;
+    bal = Math.max(0, bal - cap);
+    sched.push({ mes: p.mesNum + i, int, cap, bal });
+  }
+
+  // ── Cuántas cuotas se pueden adelantar (desde el final) ──
+  let capAcumUVA  = 0;
+  let intAhorUVA  = 0;
+  let cuotasViab  = 0;
+
+  for (let i = sched.length - 1; i >= 0 && cuotasViab < p.maxCuotas; i--) {
+    if (capAcumUVA + sched[i].cap <= excedenteUVA) {
+      capAcumUVA += sched[i].cap;
+      intAhorUVA += sched[i].int;
+      cuotasViab++;
+    } else {
+      break;
+    }
+  }
+
+  const capPagadoHoy   = capAcumUVA * p.uvaHoy;
+  const intAhorHoy     = intAhorUVA  * p.uvaHoy;
+  const nuevasRestantes = mesesRest - cuotasViab;
+
+  // ── Tasas ──
+  const inflAnual    = Math.pow(1 + p.inflM, 12) - 1;
+  const tnaCredReal  = p.tna / 100; // real anual del crédito
+
+  // PF nominal
+  const pfMens   = p.tnaPFInput / 12;
+  const pfEA     = Math.pow(1 + pfMens, 12) - 1;
+  const pfReal   = (1 + pfEA) / (1 + inflAnual) - 1;
+
+  // PF UVA real
+  const pfUVAReal = p.spreadUVA;
+
+  // FCI
+  const fciReal = p.tnaFCI > 0
+    ? (1 + Math.pow(1 + p.tnaFCI/12, 12) - 1) / (1 + inflAnual) - 1
+    : null;
+
+  // Mejor inversión
+  const opts = [
+    { name: 'Plazo Fijo 30d',  realAnual: pfReal,    nomAnual: pfEA,    liq: 'baja' },
+    { name: 'PF UVA (90d)',    realAnual: pfUVAReal,  nomAnual: inflAnual + pfUVAReal, liq: 'muy baja' },
+  ];
+  if (fciReal !== null) opts.push({ name: 'FCI / Caución', realAnual: fciReal, nomAnual: Math.pow(1+p.tnaFCI/12,12)-1, liq: 'alta' });
+  const best = opts.reduce((a,b) => a.realAnual > b.realAnual ? a : b);
+
+  const ventaja = tnaCredReal - best.realAnual;
+  const THRESH  = 0.005;
+
+  // ── Recomendación ──
+  let rec;
+  if (excedente <= 0) {
+    rec = { type:'neutral', icon:'⚠️', title:'Sin excedente disponible', sub:'Con el dinero disponible apenas cubrís la cuota normal. No hay margen para adelantar cuotas ni invertir.' };
+  } else if (cuotasViab === 0) {
+    rec = { type:'invest', icon:'📈', title:`Invertí en ${best.name}`, sub:`El excedente ($${fmt(excedente)}) no alcanza para cubrir el capital de ninguna cuota completa desde el final del crédito. Mejor invertirlo.` };
+  } else if (ventaja > THRESH) {
+    rec = { type:'prepay', icon:'🏠', title:`Adelantá ${cuotasViab} cuota${cuotasViab>1?'s':''}`, sub:`Conviene adelantar: el costo real de tu deuda UVA (${fmtPct(tnaCredReal)} real/año) es mayor que el mejor rendimiento de inversión disponible (${fmtPct(best.realAnual)} real/año en ${best.name}).` };
+  } else if (ventaja < -THRESH) {
+    rec = { type:'invest', icon:'📈', title:`Invertí en ${best.name}`, sub:`El rendimiento real de ${best.name} (${fmtPct(best.realAnual)}/año real) supera el costo real de tu deuda (${fmtPct(tnaCredReal)}/año). Hacé rendir tu plata.` };
+  } else {
+    rec = { type:'neutral', icon:'⚖️', title:'Ambas opciones son equivalentes', sub:`La diferencia entre adelantar (${fmtPct(tnaCredReal)} real) e invertir (${fmtPct(best.realAnual)} real) es menor al 0.5%. Si priorizás liquidez, invertí; si querés quitarte deuda de encima, adelantá.` };
+  }
+
+  // ── Render Recomendación ──
+  const rc = document.getElementById('recCard');
+  rc.className = 'rec-card ' + rec.type;
+  document.getElementById('recBadge').textContent  = rec.icon + ' Recomendación';
+  document.getElementById('recTitle').textContent  = rec.title;
+  document.getElementById('recSub').textContent    = rec.sub;
+  document.getElementById('recMetrics').innerHTML  = excedente > 0 ? `
+    <div><span class="rec-m-val">$${fmt(excedente)}</span><span class="rec-m-lbl">Excedente disponible</span></div>
+    <div><span class="rec-m-val">${fmtPct(tnaCredReal)}</span><span class="rec-m-lbl">Costo real deuda/año</span></div>
+    <div><span class="rec-m-val">${fmtPct(best.realAnual)}</span><span class="rec-m-lbl">Mejor rendimiento real</span></div>
+    ${cuotasViab>0?`<div><span class="rec-m-val">${cuotasViab}</span><span class="rec-m-lbl">Cuotas a adelantar</span></div>`:''}
+  ` : '';
+
+  // ── Render Escenarios ──
+  const winner = rec.type === 'prepay' ? 'A' : rec.type === 'invest' ? 'B' : null;
+  document.getElementById('scenA').className = 'scen' + (winner === 'A' ? ' winner' : '');
+  document.getElementById('scenB').className = 'scen' + (winner === 'B' ? ' winner' : '');
+  document.getElementById('badgeA').innerHTML = winner==='A'?'<div class="win-badge">✓ RECOMENDADO</div>':'';
+  document.getElementById('badgeB').innerHTML = winner==='B'?'<div class="win-badge">✓ RECOMENDADO</div>':'';
+
+  document.getElementById('metricsA').innerHTML = `
+    <div class="mrow"><span class="mrow-l">Cuotas a adelantar</span><span class="mrow-v">${cuotasViab}</span></div>
+    <div class="mrow"><span class="mrow-l">Capital pagado hoy</span><span class="mrow-v">$${fmt(capPagadoHoy)}</span></div>
+    <div class="mrow"><span class="mrow-l">Intereses ahorrados (hoy)</span><span class="mrow-v pos">$${fmt(intAhorHoy)}</span></div>
+    <div class="mrow"><span class="mrow-l">Cuotas que quedan</span><span class="mrow-v">${nuevasRestantes}</span></div>
+    <div class="mrow"><span class="mrow-l">Tasa retorno real</span><span class="mrow-v pos">${fmtPct(tnaCredReal)}/año</span></div>
+    <div class="mrow"><span class="mrow-l">Liquidez</span><span class="mrow-v">Nula (capital fijo en inmueble)</span></div>
+  `;
+
+  const ganNom = excedente * best.nomAnual;
+  const ganReal = excedente * best.realAnual;
+  document.getElementById('metricsB').innerHTML = `
+    <div class="mrow"><span class="mrow-l">Mejor opción</span><span class="mrow-v">${best.name}</span></div>
+    <div class="mrow"><span class="mrow-l">Monto a invertir</span><span class="mrow-v">$${fmt(excedente)}</span></div>
+    <div class="mrow"><span class="mrow-l">Ganancia nominal (12m)</span><span class="mrow-v pos">$${fmt(ganNom)}</span></div>
+    <div class="mrow"><span class="mrow-l">Ganancia real (12m)</span><span class="mrow-v ${ganReal>=0?'pos':'neg'}">$${fmt(ganReal)}</span></div>
+    <div class="mrow"><span class="mrow-l">Tasa retorno real</span><span class="mrow-v ${best.realAnual>=0?'pos':'neg'}">${fmtPct(best.realAnual)}/año</span></div>
+    <div class="mrow"><span class="mrow-l">Liquidez</span><span class="mrow-v">${best.liq}</span></div>
+  `;
+
+  // ── Barras de tasas ──
+  const maxRate = Math.max(tnaCredReal, pfReal, pfUVAReal, fciReal||0) * 100 || 1;
+  const toW = v => Math.max(0, (v * 100 / maxRate * 85)).toFixed(1) + '%';
+
+  document.getElementById('rateLblCredito').textContent = fmtPct(tnaCredReal) + ' real/año';
+  document.getElementById('rateLblPF').textContent      = fmtPct(pfReal) + ' real/año';
+  document.getElementById('rateLblPFUVA').textContent   = fmtPct(pfUVAReal) + ' real/año';
+  setTimeout(() => {
+    document.getElementById('rateBarCredito').style.width = toW(tnaCredReal);
+    document.getElementById('rateBarPF').style.width      = toW(pfReal);
+    document.getElementById('rateBarPFUVA').style.width   = toW(pfUVAReal);
+    if (fciReal !== null) {
+      document.getElementById('rowFCI').style.display = '';
+      document.getElementById('rateLblFCI').textContent = fmtPct(fciReal) + ' real/año';
+      document.getElementById('rateBarFCI').style.width = toW(fciReal);
+    }
+  }, 100);
+
+  // ── Gráfico ──
+  const labels = [], dataNorm = [], dataPre = [];
+  let bN = balUVA;
+  // Saldo post-adelanto (balance sin las últimas cuotasViab)
+  let bP = cuotasViab > 0
+    ? cUVA * (1 - Math.pow(1+r, -(mesesRest - cuotasViab))) / r
+    : balUVA;
+
+  const maxMeses = Math.min(mesesRest, 120);
+  for (let i = 0; i <= maxMeses; i++) {
+    labels.push('C' + (p.mesNum + i));
+    dataNorm.push(+(bN * p.uvaHoy).toFixed(0));
+    dataPre.push( +(Math.max(0, bP) * p.uvaHoy).toFixed(0));
+    if (bN > 0) { const iv=bN*r; bN=Math.max(0,bN-(cUVA-iv)); }
+    if (bP > 0) { const iv=bP*r; bP=Math.max(0,bP-(cUVA-iv)); }
+  }
+
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(document.getElementById('chartCanvas').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Saldo sin adelantar ($)', data: dataNorm, borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,.05)', borderWidth:2, pointRadius:0, fill:true },
+        { label: `Saldo adelantando ${cuotasViab} cuota/s ($)`, data: dataPre, borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,.07)', borderWidth:2, pointRadius:0, fill:true }
+      ]
+    },
+    options: {
+      responsive:true,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'top' },
+        tooltip:{ callbacks:{ label: c => c.dataset.label+': $'+fmt(c.raw) } }
+      },
+      scales:{
+        y:{ ticks:{ callback: v=>'$'+fmt(v) }, grid:{ color:'rgba(0,0,0,.04)' } },
+        x:{ ticks:{ maxTicksLimit:10, maxRotation:45 }, grid:{ display:false } }
+      }
+    }
+  });
+
+  // ── Tabla ──
+  let html = '';
+  // Índice desde donde empiezan las cuotas adelantadas (desde el final)
+  const prepayStart = sched.length - cuotasViab;
+  const mostrar = Math.min(48, sched.length);
+
+  let tBal = balUVA;
+  for (let i = 0; i < mostrar; i++) {
+    const s     = sched[i];
+    const isPre = i >= prepayStart && cuotasViab > 0;
+    html += `<tr${isPre?' class="hl-prepay"':''}>
+      <td>${s.mes}</td>
+      <td>${cUVA.toFixed(2)}</td>
+      <td>${s.int.toFixed(2)}</td>
+      <td>${s.cap.toFixed(2)}</td>
+      <td>${s.bal.toFixed(2)}</td>
+      <td>$${fmt(cUVA * p.uvaHoy)}</td>
+      <td>$${fmt(s.bal * p.uvaHoy)}</td>
+    </tr>`;
+  }
+  if (sched.length > mostrar)
+    html += `<tr><td colspan="7" style="text-align:center;color:var(--muted);font-style:italic">… y ${sched.length - mostrar} cuotas más</td></tr>`;
+
+  document.getElementById('tblBody').innerHTML = html;
+
+  // ── Consejos ──
+  const advs = [];
+  if (rec.type === 'prepay') advs.push({ i:'✅', t:`<strong>Cómo adelantar cuotas:</strong> Contactá tu banco (homebanking o sucursal) e indicá que querés "amortización anticipada de capital" reduciendo el plazo en las últimas ${cuotasViab} cuotas. El banco te dará una liquidación exacta. Hacelo antes del vencimiento de la cuota.` });
+  advs.push({ i:'🛡️', t:`<strong>Fondo de emergencia primero:</strong> Antes de adelantar cuotas, asegurate de tener entre 3 y 6 meses de gastos en una cuenta de liquidez inmediata (FCI money market, cuenta remunerada). La deuda hipotecaria es de largo plazo — priorizá liquidez de corto.` });
+  advs.push({ i:'📊', t:`<strong>Cómo leer las tasas:</strong> Tu crédito UVA cuesta ${fmtPct(tnaCredReal)} real anual (TNA). El plazo fijo a ${fmtPct(p.tnaPFInput)} nominal rinde solo ${fmtPct(pfReal)} real (descontando inflación estimada de ${fmtPct(inflAnual)} anual). Adelantar cuotas equivale a una inversión sin riesgo al ${fmtPct(tnaCredReal)} real.` });
+  if (p.spreadUVA > 0) advs.push({ i:'💜', t:`<strong>Plazo Fijo UVA:</strong> Con spread de ${fmtPct(p.spreadUVA)} real, el PF UVA es una buena alternativa cuando no conviene adelantar cuotas — tu capital ajusta por inflación más ese plus. Requiere mínimo 90 días y disponibilidad en tu banco.` });
+  advs.push({ i:'📅', t:`<strong>Recalculá cada mes:</strong> La UVA sube con la inflación, las tasas cambian con la política monetaria del BCRA. Esta decisión cambia mes a mes. Usá este simulador el día anterior al vencimiento para elegir siempre la mejor opción.` });
+  advs.push({ i:'⚖️', t:`<strong>Variables que no contempla este modelo:</strong> comisiones bancarias por cancelación anticipada, impuestos sobre rendimientos financieros (bienes personales), y variaciones futuras en tasas de plazo fijo. Consultá con un asesor contable para situaciones de gran impacto.` });
+
+  document.getElementById('advList').innerHTML = advs.map(a=>`<div class="adv-item"><span class="adv-ico">${a.i}</span><span>${a.t}</span></div>`).join('');
+
+  // Mostrar resultados
+  const res = document.getElementById('results');
+  res.style.display = 'block';
+  res.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ── Debug ─────────────────────────────────────────────────────────
+async function runDebug() {
+  const panel = document.getElementById('debugPanel');
+  panel.style.display = 'block';
+  panel.textContent = 'Probando argentinadatos.com...\n';
+  try {
+    const uva = await apiGet(`${ADATA}/finanzas/indices/uva`);
+    panel.textContent += `✅ UVA: ${uva.length} registros. Último: ${JSON.stringify(uva[uva.length-1])}\n`;
+  } catch(e) { panel.textContent += `❌ UVA: ${e.message}\n`; }
+  try {
+    const infl = await apiGet(`${ADATA}/finanzas/indices/inflacion`);
+    panel.textContent += `✅ IPC: ${infl.length} registros. Último: ${JSON.stringify(infl[infl.length-1])}\n`;
+  } catch(e) { panel.textContent += `❌ IPC: ${e.message}\n`; }
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  fetchBCRA();
+  ['montoOrig','uvaInicio','uvaActual','tnaCredito'].forEach(id =>
+    document.getElementById(id).addEventListener('input', autoRecalcFields)
+  );
+});
+</script>
+</body>
+</html>
