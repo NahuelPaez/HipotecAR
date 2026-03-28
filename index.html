@@ -709,7 +709,7 @@ const dateStr = d => d.toISOString().split('T')[0];
 
 // ─── API de datos argentinos ──────────────────────────────────────
 // Fuente principal: argentinadatos.com (API pública, sin auth)
-const ADATA = 'https://argentinadatos.com/api/v1';
+const ADATA = 'https://api.argentinadatos.com/v1';
 
 async function apiGet(url) {
   const r = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
